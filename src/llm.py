@@ -48,14 +48,14 @@ class GroqProvider(LLMProvider):
             model=self.model,
             max_tokens=max_tokens,
             temperature=0,
+            reasoning_effort="low",
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
             ],
         )
-        return (r.choices[0].message.content,
-                r.usage.prompt_tokens,
-                r.usage.completion_tokens)
+        text = r.choices[0].message.content or ""
+        return text, r.usage.prompt_tokens, r.usage.completion_tokens
 
 
 def get_provider(name: str, model: str) -> LLMProvider:

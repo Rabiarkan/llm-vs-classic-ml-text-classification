@@ -28,7 +28,7 @@ def check_llm():
     text, tin, tout = p.complete(
         system="Reply with exactly one word, no punctuation.",
         user="Say OK",
-        max_tokens=16,
+        max_tokens=128,
     )
     cost = estimate_cost(tin, tout, p.model)
     print(f"✓ answer: {text.strip()!r}")
