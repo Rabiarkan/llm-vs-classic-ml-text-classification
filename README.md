@@ -1,2 +1,4 @@
-# llm-vs-classic-ml-text-classification
-TF-IDF/XGBoost baseline vs zero-shot &amp; few-shot LLM classification, with cost/latency benchmarking
+# LLM vs Classic ML — Text Classification Benchmark
+
+## Problem
+3-class sentiment (negative/neutral/positive) on product reviews.
