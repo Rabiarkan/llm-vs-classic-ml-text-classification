@@ -227,3 +227,6 @@ data/processed/*
 
 # Results
 results/*.jsonl
+
+
+notebooks/
