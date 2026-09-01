@@ -8,9 +8,11 @@ RUNS_LOG = RESULTS / "runs.jsonl"
 
 SEED = 42
 LABELS = ["negative", "neutral", "positive"]
-SAMPLE_SIZE = 500        
-POOL_SIZE = 5000         
-TEST_SIZE = 0.30         # 350 train / 150 test
+EVAL_SIZE = 1000
+EVAL_BAL_SIZE = 300     # class-balanced (100/100/100)     
+DEV_SIZE = 200         
+POOL_SIZE = 30000    
+TRAIN_SIZES = [100, 500, 2000, 10000]
 
 # --- LLM ---
 PROVIDER = "groq"   # "groq" | "anthropic"
