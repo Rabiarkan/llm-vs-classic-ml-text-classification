@@ -100,7 +100,7 @@ def run(kind: str, train: pd.DataFrame, evals: dict, verbose: bool = True) -> di
                 eval_set=name, n_train=len(train), n_test=len(ev),
                 train_time_s=res[name]["fit_time_s"],
                 latency_p50_s=round(res[name]["pred_time_s"] / len(ev), 6),
-                cost_usd=0.0, notes=f"baseline, {len(train)} train rows")
+                cost_usd=0.0, notes=f"baseline, {len(train)} train rows, stratified split")
     return summary
 
 def learning_curve(pool: pd.DataFrame, evals: dict, n_repeats: int = 3) -> pd.DataFrame:
@@ -151,10 +151,19 @@ if __name__ == "__main__":
 
     n_full = min(TRAIN_SIZES[-1], len(pool))
     print(f"\n########## FULL BASELINE (n_train={n_full:,}) ##########")
-    full = pool.head(n_full)
+    from sklearn.model_selection import train_test_split
+    if n_full < len(pool):
+        full, _ = train_test_split(pool, train_size=n_full, random_state=SEED,
+                                   stratify=pool["label"])
+    else:
+        full = pool
+
+    print("class distr:",
+          full["label"].value_counts().reindex(LABELS).to_dict())
+
     for kind in ("logreg", "xgb"):
         run(kind, full, evals)
-
+"""
     print("\n########## LEARNING CURVE ##########")
     curve = learning_curve(pool, evals)
 
@@ -169,3 +178,4 @@ if __name__ == "__main__":
     print("\n--- neutral F1 avg ---")
     print(curve.pivot_table(index="n_train", columns=["eval_set", "model"],
                             values="f1_neutral", aggfunc="mean").round(4).to_string())
+"""

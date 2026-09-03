@@ -8,6 +8,7 @@ RUNS_LOG = RESULTS / "runs.jsonl"
 
 SEED = 42
 LABELS = ["negative", "neutral", "positive"]
+
 EVAL_SIZE = 1000
 EVAL_BAL_SIZE = 300     # class-balanced (100/100/100)     
 DEV_SIZE = 200         
@@ -25,8 +26,17 @@ BENCH_MODELS_PAID = ["claude-haiku-4-5-20251001"]
 PRICING = {
     "openai/gpt-oss-20b":         (0.075, 0.30),
     "openai/gpt-oss-120b":        (0.15,  0.60),
-    "claude-haiku-4-5-20251001":  (1.00,  5.00),
+    "claude-haiku-4-5-20251001":  (1.00,  3.00),
 }
+
+DAILY_TPD = {
+    "openai/gpt-oss-20b":  200_000,
+    "openai/gpt-oss-120b": 200_000,
+}
+
+MAX_USD_PER_RUN = 0.60
+MAX_USD_TOTAL = 3.00
 
 for _p in (DATA_RAW, DATA_PROCESSED, RESULTS):
     _p.mkdir(parents=True, exist_ok=True)
+    

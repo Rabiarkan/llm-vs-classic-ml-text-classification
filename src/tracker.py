@@ -4,7 +4,7 @@ import time
 from contextlib import contextmanager
 from datetime import datetime, timezone
 
-from src.config import RUNS_LOG, PRICING
+from src.config import RUNS_LOG, PRICING, MAX_USD_PER_RUN, MAX_USD_TOTAL, DAILY_TPD
 
 
 def estimate_cost(input_tokens: int, output_tokens: int, model: str) -> float:
@@ -13,12 +13,39 @@ def estimate_cost(input_tokens: int, output_tokens: int, model: str) -> float:
         raise ValueError(f"No price defined for {model} — fill in PRICING")
     return input_tokens / 1_000_000 * p_in + output_tokens / 1_000_000 * p_out
 
+def spent_so_far() -> float:
+    if not RUNS_LOG.exists():
+        return 0.0
+    total = 0.0
+    with open(RUNS_LOG, encoding="utf-8") as f:
+        for line in f:
+            try:
+                rec = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if rec.get("provider") == "anthropic":
+                total += rec.get("cost_usd") or 0.0
+    return total
 
-def guard_budget(n_examples: int, model: str, max_usd: float = 0.50) -> float:
-    est = estimate_cost(n_examples * 180, n_examples * 30, model)
-    if est > max_usd:
-        raise RuntimeError(f"Estimated ${est:.3f} > limit ${max_usd:.2f} — cancel")
-    print(f"Budget OK: ~${est:.4f} ({n_examples} example, {model})")
+def guard_budget(n_examples: int, model: str, provider: str = "",
+                 max_usd: float | None = None) -> float:
+    est = estimate_cost(n_examples * 180, n_examples * 40, model)
+    cap = MAX_USD_PER_RUN if max_usd is None else max_usd
+
+    if est > cap:
+        raise RuntimeError(f"Estimated ${est:.3f} > limit ${cap:.2f} — cancel")
+
+    if provider == "anthropic":
+        spent = spent_so_far()
+        if spent + est > MAX_USD_TOTAL:
+            raise RuntimeError(
+                f"Cumulative ${spent:.2f} + ${est:.3f} > ${MAX_USD_TOTAL:.2f} — cancel")
+        print(f"Budget OK: ~${est:.4f}  (so far ${spent:.2f})")
+    else:
+        tpd = DAILY_TPD.get(model)
+        est_tok = n_examples * 220
+        note = f" | Estimated {est_tok:,} token / daily {tpd:,}" if tpd else ""
+        print(f"Budget OK: ~${est:.4f} (list price; free tier $0){note}")
     return est
 
 

@@ -24,12 +24,14 @@ class AnthropicProvider(LLMProvider):
         r = self.client.messages.create(
             model=self.model,
             max_tokens=max_tokens,
-            temperature=0,
-            system=system,
+            extra_body={"temperature": 0},
+            system=[{"type": "text", "text": system,
+                     "cache_control": {"type": "ephemeral"}}],
             messages=[{"role": "user", "content": user}],
         )
         text = "".join(b.text for b in r.content if b.type == "text")
         return text, r.usage.input_tokens, r.usage.output_tokens
+
 
 
 class GroqProvider(LLMProvider):
@@ -65,6 +67,8 @@ def get_provider(name: str, model: str) -> LLMProvider:
         return AnthropicProvider(model)
     raise ValueError(f"unknown provider: {name!r} (groq | anthropic)")
 
+def provider_for(model: str) -> str:
+    return "anthropic" if model.startswith("claude") else "groq"
 
 def assert_model_available(provider: LLMProvider) -> None:
     models = getattr(provider.client, "models", None)

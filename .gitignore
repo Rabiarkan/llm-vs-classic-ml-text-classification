@@ -227,6 +227,6 @@ data/processed/*
 
 # Results
 results/*.jsonl
-
+results/partial_*.csv
 
 notebooks/
