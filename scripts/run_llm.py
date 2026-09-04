@@ -1,26 +1,51 @@
-# Zero-shot final evaluation: each model × each evaluation set, one round.
 """
-Usage:
-    python scripts/run_zeroshot.py [model1 model2 ...]
-    If no model is specified, all free models are evaluated.
-"""
+LLM final evaluation
 
+Usage:
+    python scripts/run_llm.py openai/gpt-oss-20b --balanced
+    python scripts/run_llm.py openai/gpt-oss-20b --balanced --fewshot
+    python scripts/run_llm.py claude-haiku-4-5-20251001 --balanced --natural --fewshot
+"""
 import sys
+
 import pandas as pd
 from dotenv import load_dotenv
 from sklearn.metrics import (accuracy_score, classification_report,
                              confusion_matrix, f1_score)
 
-from src.config import (DATA_PROCESSED, RESULTS, LABELS, BENCH_MODELS_FREE)
+from src.config import DATA_PROCESSED, RESULTS, LABELS, BENCH_MODELS_FREE
 from src.llm import get_provider, provider_for, assert_model_available
 from src.llm_classify import classify_all
-from src.prompts import SYSTEM, SYSTEM_VERSION
+from src.prompts import SYSTEM, SYSTEM_VERSION, SYSTEM_FEWSHOT, FEWSHOT_VERSION
 from src.tracker import estimate_cost, guard_budget, log_run
 
 load_dotenv()
 
-EVALS = {name: pd.read_csv(DATA_PROCESSED / f"eval_{name}.csv")
-         for name in ["balanced", "natural"]}
+FLAGS = {"--fewshot"}
+
+argv = sys.argv[1:]
+few = "--fewshot" in argv
+models = [a for a in argv if not a.startswith("--")] or BENCH_MODELS_FREE
+only = [a[2:] for a in argv if a.startswith("--") and a not in FLAGS]
+
+EVALS = {n: pd.read_csv(DATA_PROCESSED / f"eval_{n}.csv")
+         for n in ["balanced", "natural"]}
+if only:
+    unknown = set(only) - set(EVALS)
+    if unknown:
+        raise SystemExit(f"unknown eval set: {unknown} (valid: {set(EVALS)})")
+    EVALS = {k: v for k, v in EVALS.items() if k in only}
+
+assert SYSTEM_FEWSHOT.startswith(SYSTEM), "SYSTEM_FEWSHOT broke the base SYSTEM string"
+
+system = SYSTEM_FEWSHOT if few else SYSTEM
+version = FEWSHOT_VERSION if few else SYSTEM_VERSION
+method = "few_shot" if few else "zero_shot"
+extra_tok = (len(SYSTEM_FEWSHOT) - len(SYSTEM)) // 4 if few else 0
+
+print(f"method: {method} ({version})" + (f"  +{extra_tok} token/call" if few else ""))
+print(f"models: {models}\neval sets: {list(EVALS)}")
+
 
 def metrics(y_true, y_pred) -> dict:
     per_class = f1_score(y_true, y_pred, labels=LABELS, average=None, zero_division=0)
@@ -29,43 +54,34 @@ def metrics(y_true, y_pred) -> dict:
             "accuracy": round(accuracy_score(y_true, y_pred), 4),
             **{f"f1_{l}": round(float(s), 4) for l, s in zip(LABELS, per_class)}}
 
-argv = sys.argv[1:]
-models = [a for a in argv if not a.startswith("--")] or BENCH_MODELS_FREE
-only = [a[2:] for a in argv if a.startswith("--")]
-
-if only:
-    unknown = set(only) - set(EVALS)
-    if unknown:
-        raise SystemExit(f"unknown eval set: {unknown} (valid: {set(EVALS)})")
-    EVALS = {k: v for k, v in EVALS.items() if k in only}
-
-print(f"models: {models}\neval sets: {list(EVALS)}")
-
-
 
 for model in models:
     p = get_provider(provider_for(model), model)
     assert_model_available(p)
 
     for eval_name, ev in EVALS.items():
-        print(f"\n{'=' * 60}\n{model} @ eval_{eval_name} (n={len(ev)})\n{'=' * 60}")
+        print(f"\n{'=' * 60}\n{method} | {model} @ eval_{eval_name} (n={len(ev)})\n{'=' * 60}")
+
+        # few-shot prompt'u ~3.5x uzun; bütçe tahmini bunu yansıtmalı
+        tok_in = 180 + extra_tok
         guard_budget(len(ev), model, provider=p.name)
 
-
         if p.name == "anthropic":
-            est = estimate_cost(len(ev) * 180, len(ev) * 40, model)
+            est = estimate_cost(len(ev) * tok_in, len(ev) * 40, model)
             if input(f"~${est:.3f} will be spent. Continue? [y/N] ").strip().lower() != "y":
                 print("cancel")
                 continue
 
         safe = model.replace("/", "_")
-        res = classify_all(p, ev["text"].tolist(), system=SYSTEM,
+        stem = f"{method}_{safe}_{eval_name}"
+
+        res = classify_all(p, ev["text"].tolist(), system=system,
                            desc=f"{safe}/{eval_name}",
-                           checkpoint=RESULTS / f"partial_{safe}_{eval_name}.csv")
+                           checkpoint=RESULTS / f"partial_{stem}.csv")
 
         if len(res) < len(ev):
-            print(f"Missing ({len(res)}/{len(ev)}) — not logged. "
-                  "Missing data")
+            print(f"INCOMPLETE RUN ({len(res)}/{len(ev)}) — isnot logged. "
+                  "Missing data...")
             continue
 
         res["true"] = ev["label"].values
@@ -85,9 +101,10 @@ for model in models:
 
         cost = estimate_cost(int(res["input_tokens"].sum()),
                              int(res["output_tokens"].sum()), model)
-        log_run("zero_shot", metrics(res["true"], res["pred_eval"]),
+        log_run(method, metrics(res["true"], res["pred_eval"]),
                 provider=p.name, model=model, eval_set=eval_name,
-                n_train=0, n_test=len(res), n_parse_failed=n_bad,
+                n_train=0, n_shot=4 if few else 0, n_test=len(res),
+                n_parse_failed=n_bad,
                 input_tokens=int(res["input_tokens"].sum()),
                 output_tokens=int(res["output_tokens"].sum()),
                 cost_usd=round(cost, 5),
@@ -95,6 +112,7 @@ for model in models:
                 latency_p50_s=round(float(res["latency_s"].median()), 3),
                 latency_p95_s=round(float(res["latency_s"].quantile(0.95)), 3),
                 mean_confidence=round(float(res["confidence"].mean(skipna=True)), 3),
-                notes=f"zero-shot, prompt={SYSTEM_VERSION}, temperature=0")
+                notes=f"{method}, prompt={version}, temperature=0")
 
-        res.to_csv(RESULTS / f"preds_zeroshot_{safe}_{eval_name}.csv", index=False)
+        res.to_csv(RESULTS / f"preds_{stem}.csv", index=False)
+        print(f"records: results/preds_{stem}.csv")
