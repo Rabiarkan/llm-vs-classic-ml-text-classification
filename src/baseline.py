@@ -13,7 +13,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report, f1_score, accuracy_score, confusion_matrix
 from sklearn.pipeline import Pipeline
 
-from src.config import DATA_PROCESSED, SEED, LABELS, RESULTS, TRAIN_SIZES
+from src.config import DATA_PROCESSED, SEED, LABELS, PREDICTIONS, TRAIN_SIZES, ANALYSIS
 from src.tracker import log_run, timed
 
 EVAL_NAMES = ["natural", "balanced"]
@@ -94,7 +94,7 @@ def run(kind: str, train: pd.DataFrame, evals: dict, verbose: bool = True) -> di
                    f"tfidf_{kind} @ eval_{name} (n_train={len(train):,})")
             saved = ev[["text", "label"]].copy()
             saved["pred"] = pred
-            saved.to_csv(RESULTS / f"preds_tfidf_{kind}_{name}.csv", index=False)
+            saved.to_csv(PREDICTIONS / f"preds_tfidf_{kind}_{name}.csv", index=False)
 
         log_run(f"tfidf_{kind}", m, provider="local", model=f"tfidf+{kind}",
                 eval_set=name, n_train=len(train), n_test=len(ev),
@@ -135,7 +135,7 @@ def learning_curve(pool: pd.DataFrame, evals: dict, n_repeats: int = 3) -> pd.Da
                       + "  ".join(f"{k}={v['macro_f1']:.4f}" for k, v in res.items()))
 
     df = pd.DataFrame(rows)
-    df.to_csv(RESULTS / "learning_curve.csv", index=False)
+    df.to_csv(ANALYSIS / "learning_curve.csv", index=False)
     return df
 
 if __name__ == "__main__":

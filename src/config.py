@@ -6,6 +6,10 @@ DATA_PROCESSED = ROOT / "data" / "processed"
 RESULTS = ROOT / "results"
 RUNS_LOG = RESULTS / "runs.jsonl"
 
+PREDICTIONS = RESULTS / "predictions"
+ANALYSIS = RESULTS / "analysis"
+FIGURES = RESULTS / "figures"
+
 SEED = 42
 LABELS = ["negative", "neutral", "positive"]
 
@@ -37,6 +41,6 @@ DAILY_TPD = {
 MAX_USD_PER_RUN = 0.60
 MAX_USD_TOTAL = 3.00
 
-for _p in (DATA_RAW, DATA_PROCESSED, RESULTS):
+for _p in (DATA_RAW, DATA_PROCESSED, RESULTS, PREDICTIONS, ANALYSIS, FIGURES):
     _p.mkdir(parents=True, exist_ok=True)
     

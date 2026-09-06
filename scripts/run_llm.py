@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 from sklearn.metrics import (accuracy_score, classification_report,
                              confusion_matrix, f1_score)
 
-from src.config import DATA_PROCESSED, RESULTS, LABELS, BENCH_MODELS_FREE
+from src.config import DATA_PROCESSED, RESULTS, LABELS, BENCH_MODELS_FREE, PREDICTIONS
 from src.llm import get_provider, provider_for, assert_model_available
 from src.llm_classify import classify_all
 from src.prompts import SYSTEM, SYSTEM_VERSION, SYSTEM_FEWSHOT, FEWSHOT_VERSION
@@ -114,5 +114,5 @@ for model in models:
                 mean_confidence=round(float(res["confidence"].mean(skipna=True)), 3),
                 notes=f"{method}, prompt={version}, temperature=0")
 
-        res.to_csv(RESULTS / f"preds_{stem}.csv", index=False)
-        print(f"records: results/preds_{stem}.csv")
+        res.to_csv(PREDICTIONS / f"preds_{stem}.csv", index=False)
+        print(f"records: results/predictions/preds_{stem}.csv")

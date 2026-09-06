@@ -226,7 +226,4 @@ data/processed/*
 *.ipynb_checkpoints
 
 # Results
-results/*.jsonl
 results/partial_*.csv
-
-notebooks/

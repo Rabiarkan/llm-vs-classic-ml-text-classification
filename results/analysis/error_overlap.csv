@@ -1,0 +1,7 @@
+eval_set,method,model,n,both_correct,both_wrong,only_base,only_llm,err_jaccard,mcnemar_p,verdict
+balanced,zero_shot,gpt-oss-20b,300,189,41,30,40,0.369,0.28198,LLM
+balanced,few_shot,gpt-oss-20b,300,193,34,26,47,0.318,0.01862,LLM
+balanced,zero_shot,claude-haiku,300,184,34,35,47,0.293,0.22424,LLM
+natural,zero_shot,gpt-oss-20b,1000,789,60,42,109,0.284,0.0,LLM
+natural,few_shot,gpt-oss-20b,1000,792,60,39,109,0.288,0.0,LLM
+natural,zero_shot,claude-haiku,1000,798,52,33,117,0.257,0.0,LLM

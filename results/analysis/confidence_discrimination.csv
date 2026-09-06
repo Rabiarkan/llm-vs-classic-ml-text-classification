@@ -1,0 +1,12 @@
+method,model,eval_set,auroc,ece,mean_conf,accuracy,conf_min,conf_max
+few_shot,claude-haiku-4-5-20251001,balanced,0.8522,0.1491,0.8792,0.7733,0.72,0.99
+few_shot,gpt-oss-120b,balanced,0.7361,0.117,0.877,0.7669,0.62,0.95
+few_shot,gpt-oss-120b,natural,0.9089,0.0751,0.9065,0.91,0.62,0.96
+few_shot,gpt-oss-20b,balanced,0.6522,0.0717,0.8717,0.8,0.6,0.95
+few_shot,gpt-oss-20b,natural,0.8586,0.0623,0.9045,0.901,0.4,0.95
+zero_shot,claude-haiku-4-5-20251001,balanced,0.8338,0.1188,0.8624,0.77,0.72,0.99
+zero_shot,claude-haiku-4-5-20251001,natural,0.881,0.0519,0.9017,0.915,0.72,0.98
+zero_shot,gpt-oss-120b,balanced,0.7455,0.1048,0.8595,0.76,0.6,0.97
+zero_shot,gpt-oss-120b,natural,0.8968,0.0637,0.9039,0.911,0.55,0.97
+zero_shot,gpt-oss-20b,balanced,0.7029,0.1325,0.8572,0.7633,0.6,0.95
+zero_shot,gpt-oss-20b,natural,0.9122,0.0641,0.9071,0.898,0.4,0.95
