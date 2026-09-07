@@ -20,6 +20,9 @@ from src.config import LABELS, PREDICTIONS, ANALYSIS
 
 THRESHOLDS = [0.0, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95]
 MIN_SUBSET = 10          
+MIN_PRED_PER_CLASS = 5 # Class F1 calculated using 1-2 predictions is meaningless:
+# 120b @ natural, thr=0.95 made a single neutral prediction
+# and, knowing the correct answer, produced a macro-F1 of 1.0000
 
 # Assumption regarding the cost of human review
 REVIEW_MIN = 0.5                              # minutes per example
@@ -79,8 +82,9 @@ def analyse(path: Path) -> dict | None:
             "n_pred_classes": int((pred_counts > 0).sum()),
             "n_pred_neutral": int(pred_counts["neutral"]),
             "n_auto": len(sub), "n_human": n_human,
-            "human_cost_usd": round(n_human * REVIEW_USD, 2),
-            "valid": (pred_counts > 0).sum() == len(LABELS),
+            "human_per_1k": round(n_human / len(d) * 1000 * REVIEW_USD, 2),
+            "n_human": n_human,
+            "valid": bool((pred_counts >= MIN_PRED_PER_CLASS).all()),
         })
 
     # --- Separation and calibration (threshold-independent) ---
@@ -137,7 +141,7 @@ if __name__ == "__main__":
 
     print("=" * 78)
     cols = ["threshold", "coverage", "precision", "recall", "macro_f1",
-            "n_pred_neutral", "n_human", "human_cost_usd", "valid"]
+            "n_pred_neutral", "n_human", "human_per_1k", "valid"]
     for (meth, mdl, ev), g in sweep.groupby(["method", "model", "eval_set"]):
         print(f"\n--- {meth} | {mdl} | {ev} ---")
         print(g[cols].to_string(index=False))
@@ -147,7 +151,7 @@ if __name__ == "__main__":
     print("=" * 78)
     bop = best_operating_point(sweep)
     print(bop[["method", "model", "eval_set", "threshold", "coverage",
-               "precision", "recall", "n_human", "human_cost_usd"]].to_string(index=False))
+               "precision", "recall", "n_human", "human_per_1k"]].to_string(index=False))
 
     print("\n" + "=" * 78)
     print("4) COST  (1,000 samples, coverage ≥ 75% at the test point)")

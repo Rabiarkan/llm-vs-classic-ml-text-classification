@@ -17,7 +17,7 @@ EVAL_SIZE = 1000
 EVAL_BAL_SIZE = 300     # class-balanced (100/100/100)     
 DEV_SIZE = 200         
 POOL_SIZE = 30000    
-TRAIN_SIZES = [100, 500, 2000, 10000]
+TRAIN_SIZES = [100, 500, 2000, 10000, 30000]
 
 # --- LLM ---
 PROVIDER = "groq"   # "groq" | "anthropic"
