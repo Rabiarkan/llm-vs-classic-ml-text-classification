@@ -1,9 +1,10 @@
 """
-LLM classification run: training, validation, evaluation.
-Measurement guidelines:
-  - Latency is measured per request; it does NOT include retry wait times
-  - Token counts are taken from the provider’s “usage” field, not estimated
-  - Parsing errors are flagged separately from model errors
+LLM classification run: call, validate, measure.
+Measurement notes:
+  - Latency wraps the retry decorator, so it INCLUDES backoff waits on retried
+    calls. p50 is unaffected in practice; tail percentiles are not (see README §5).
+  - Token counts are taken from the provider's `usage` field, not estimated
+  - Schema failures are flagged separately from model errors
 """
 import json
 import re

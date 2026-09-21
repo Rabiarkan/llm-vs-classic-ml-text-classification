@@ -1,6 +1,19 @@
 """
-Do the baseline and LLM make the same mistakes on the same examples?
-McNemar test: Is the difference statistically significant?
+Do the baseline and the LLM fail on the same examples — and is the gap between
+them real?
+Three questions, three measures:
+  error overlap : Jaccard of the two error sets. Low overlap means the methods are
+                  complementary and a router between them has room to gain.
+  significance  : paired bootstrap on macro-F1 (PRIMARY — it is the reported
+                  metric). McNemar is kept alongside because it tests accuracy,
+                  a different question; where they disagree, trust the bootstrap.
+  oracle        : score if a perfect router picked whichever method was right,
+                  in macro-F1 and accuracy. Accuracy understates the natural-set
+                  gain because the majority class already sits near the ceiling.
+
+Scope of the intervals: eval-set sampling only. LLM run-to-run variance at
+temperature=0 (~±0.025) and baseline seed variance (~±0.02-0.03) are not
+included.
 """
 from itertools import product
 

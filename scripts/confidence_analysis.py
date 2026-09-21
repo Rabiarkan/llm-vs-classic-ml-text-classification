@@ -83,7 +83,6 @@ def analyse(path: Path) -> dict | None:
             "n_pred_neutral": int(pred_counts["neutral"]),
             "n_auto": len(sub), "n_human": n_human,
             "human_per_1k": round(n_human / len(d) * 1000 * REVIEW_USD, 2),
-            "n_human": n_human,
             "valid": bool((pred_counts >= MIN_PRED_PER_CLASS).all()),
         })
 

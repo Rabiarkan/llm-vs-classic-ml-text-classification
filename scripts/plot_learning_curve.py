@@ -1,6 +1,6 @@
 """Learning Curve + LLM Reference Band
   log x-ekseni : 100→30.000 on a linear axis, the first three points are clustered;
-    a log scale makes the shape of the curve visible and shows that it is NOT SATURATED.
+    a log scale makes the shape of the curve visible.
 
   LLM as a BAND : We measured that setting `temperature=0` is not deterministic (same model,
     same prompt, a 1.6–2.5-point difference across runs). A single line hides this
@@ -28,8 +28,11 @@ def load():
     return curve, runs
 
 def main() -> None:
-    curve, runs = load()
-    llm_all = runs[runs["method"].isin(["zero_shot", "few_shot"])]
+    curve, runs = load()    
+    llm_all = (runs[runs["method"].isin(["zero_shot", "few_shot"])]
+           .sort_values("timestamp")
+           .drop_duplicates(subset=["method", "model", "eval_set"], keep="last"))
+    
     trivial = runs[runs["method"] == "trivial_majority"]
 
     fig, axes = plt.subplots(1, 2, figsize=(11.5, 4.4), sharey=True)
@@ -54,8 +57,10 @@ def main() -> None:
                         color=COLORS[kind], label=label)
 
             if kind == "logreg":
+                last_x = agg.index[-1]
                 for x, y in agg["mean"].items():
-                    ax.annotate(f"{y:.2f}", xy=(x, y), xytext=(0, 9),
+                    dy = -14 if x == last_x else 9
+                    ax.annotate(f"{y:.2f}", xy=(x, y), xytext=(0, dy),
                                 textcoords="offset points", ha="center",
                                 fontsize=7, color=COLORS["logreg"])
 
@@ -65,14 +70,14 @@ def main() -> None:
             lo, hi = float(sub.min()), float(sub.max())
             ax.axhspan(lo, hi, alpha=0.12, color=COLORS["llm"], zorder=0)
             ax.axhline(hi, color=COLORS["llm"], lw=2,
-                       label=f"LLM, zero labels ({lo:.2f}-{hi:.2f})")
+                       label=f"LLM, 0–4 labels (band = min–max of runs)")
 
         # --- trivial base ---
         t = trivial.loc[trivial["eval_set"] == ev, "macro_f1"]
         if not t.empty:
             floor = float(t.iloc[0])
             ax.axhline(floor, color=COLORS["floor"], ls=":", lw=1.5,
-                       label=f"trivial floor ({floor:.2f})")
+                       label=f"trivial floor (majority class)")
 
         # --- final meausure ---
         if "logreg" in aggs and len(aggs["logreg"]) >= 2:
@@ -100,7 +105,8 @@ def main() -> None:
                loc="center left", bbox_to_anchor=(1.0, 0.5), fontsize=8,
                framealpha=0.95)
 
-    fig.suptitle("Balanced classes: 30k labels close the gap", fontsize=11.5)
+    fig.suptitle("30k labels reach the LLM band on balanced classes — "
+                 "not on the production distribution", fontsize=11.5)
     plt.tight_layout()
     
 

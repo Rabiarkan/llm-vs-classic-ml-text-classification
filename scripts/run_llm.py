@@ -62,7 +62,6 @@ for model in models:
     for eval_name, ev in EVALS.items():
         print(f"\n{'=' * 60}\n{method} | {model} @ eval_{eval_name} (n={len(ev)})\n{'=' * 60}")
 
-        # few-shot prompt'u ~3.5x uzun; bütçe tahmini bunu yansıtmalı
         tok_in = 180 + extra_tok
         guard_budget(len(ev), model, provider=p.name)
 

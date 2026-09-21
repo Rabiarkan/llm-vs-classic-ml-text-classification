@@ -10,7 +10,7 @@ import pandas as pd
 from dotenv import load_dotenv
 from sklearn.metrics import classification_report, confusion_matrix, f1_score
 
-from src.config import DATA_PROCESSED, RESULTS, LABELS, LLM_MODEL
+from src.config import DATA_PROCESSED, PREDICTIONS, LABELS, LLM_MODEL
 from src.llm import get_provider, provider_for, assert_model_available
 from src.llm_classify import classify_all
 from src.prompts import (SYSTEM, SYSTEM_VERSION, SYSTEM_FEWSHOT, FEWSHOT_VERSION)
@@ -37,7 +37,7 @@ assert_model_available(p)
 
 res = classify_all(p, dev["text"].tolist(), system=system,
                    desc=f"dev/{tag}",
-                   checkpoint=RESULTS / f"partial_dev_{tag}.csv")
+                   checkpoint=PREDICTIONS / f"partial_dev_{tag}.csv")
 
 if len(res) < len(dev):
     raise SystemExit(f"INCOMPLETE RUN ({len(res)}/{len(dev)}) — isnot logged")
@@ -80,7 +80,7 @@ acc = ok.assign(correct=ok["pred"] == ok["true"]).groupby(
 print(acc.to_string())
 
 # --- zero-shot ---
-prev = RESULTS / "dev_zeroshot_preds.csv"
+prev = PREDICTIONS / "dev_zeroshot_preds.csv"
 if few and prev.exists():
     base = pd.read_csv(prev)
     m = base.merge(ok[["text", "pred"]], on="text", suffixes=("_zs", "_fs"))
@@ -95,5 +95,5 @@ for _, r in wrong.head(10).iterrows():
     print(f"[{r['true']} → {r['pred']}, conf={r['confidence']}] {r['reason']}")
     print(f"    {r['text'][:170]}\n")
 
-res.to_csv(RESULTS / f"dev_{tag}_preds.csv", index=False)
+res.to_csv(PREDICTIONS / f"dev_{tag}_preds.csv", index=False)
 print(f"records: results/dev_{tag}_preds.csv")

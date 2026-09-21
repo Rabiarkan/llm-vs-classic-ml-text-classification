@@ -26,11 +26,10 @@ LLM_MODEL = "openai/gpt-oss-120b"
 BENCH_MODELS_FREE = ["openai/gpt-oss-20b", "openai/gpt-oss-120b"]
 BENCH_MODELS_PAID = ["claude-haiku-4-5-20251001"]
 
-# for REPORTING purposes.. actual spending on the Groq free tier is $0
 PRICING = {
     "openai/gpt-oss-20b":         (0.075, 0.30),
     "openai/gpt-oss-120b":        (0.15,  0.60),
-    "claude-haiku-4-5-20251001":  (1.00,  3.00),
+    "claude-haiku-4-5-20251001":  (1.00,  5.00),
 }
 
 DAILY_TPD = {

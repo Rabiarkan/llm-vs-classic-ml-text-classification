@@ -180,7 +180,6 @@ if __name__ == "__main__":
     print(summarise(curve, "f1_neutral").to_string(index=False))
  
     print("\n########## README MAIN TABLE (largest n, mean of seeds) ##########")
-    biggest = curve[curve["n_train"] == curve["n_train"].max()]
     for kind in curve["model"].unique():
         for ev in EVAL_NAMES:
             g = curve[(curve["model"] == kind) & (curve["eval_set"] == ev)]

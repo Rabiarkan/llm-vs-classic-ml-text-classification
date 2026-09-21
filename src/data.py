@@ -16,7 +16,7 @@ from src.config import (DATA_PROCESSED, SEED, POOL_SIZE, EVAL_SIZE, EVAL_BAL_SIZ
 CHUNK = 100_000
 DATASET = "snap/amazon-fine-food-reviews"
 MIN_CHARS, MAX_CHARS = 20, 1500
-NEEDED = POOL_SIZE + EVAL_SIZE + DEV_SIZE
+NEEDED = POOL_SIZE + EVAL_SIZE + EVAL_BAL_SIZE + DEV_SIZE
 
 HTML_TAG = r"<[^>]+>"
 WHITESPACE = r"\s+"
@@ -148,3 +148,4 @@ if __name__ == "__main__":
 
     print("\neval_natural dist:\n", eval_nat["label"].value_counts().to_string())
     print("\neval_balanced dist:\n", eval_bal["label"].value_counts().to_string())
+    print(f"{'remaining':24s}: {len(df):,}")

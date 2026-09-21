@@ -15,6 +15,15 @@ Candidate pool: **5,897**
 Contrast-marker rate is highest for neutral — consistent with the EDA
 finding, though the margin is modest.
 
+## Selected (4)
+
+| id | label | why |
+|---|---|---|
+| [11944] | neutral | canonical "overall … okay" verdict after weighing |
+| [23432] | neutral | unmet expectation, no advice to avoid |
+| [5457] | negative | same structure as [23432], but ends "suggest avoiding" — the boundary |
+| [22890] | positive | opens "okay", prefers a competitor, lists flaws — yet rated 4–5 stars |
+
 ## NEGATIVE
 
 **[24998]** (207 chars)
