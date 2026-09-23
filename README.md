@@ -9,8 +9,9 @@ Measured: macro-F1, cost per 1,000 reviews, latency, and confidence.
 showed no significant difference from the zero-shot and few-shot LLMs tested. On a test
 set with the real-world class mix, the LLMs scored 0.09–0.12 macro-F1 higher, mainly on
 the neutral and negative classes. The baseline took under 1 ms per review in batch
-prediction; the LLMs had a median latency of 0.14–1.1 s per call. These results come
-from one dataset and single LLM runs.
+prediction; the LLMs had a median latency of 0.14–1.1 s per call. 
+These results come from one dataset; each LLM configuration in the tables was run once,
+with run-to-run variation measured separately.
 
 ---
 
@@ -98,9 +99,11 @@ confidence value as text ("0. nine"); they are counted as wrong answers.
 Costs are list prices (Sep 2026) from token counts, without tier or batch
 discounts. The 30k-label row has no ± because it uses the whole training pool, so all
 three seeds see the same data. Few-shot Haiku was not run on `eval_natural`: it is the
-most expensive configuration and did not improve on zero-shot in the balanced set. The
-differences between the LLMs are small and come from single runs, so they should not be
-read as a ranking.
+most expensive configuration and did not improve on zero-shot in the balanced set. 
+Repeating zero-shot gpt-oss-20b five times on `eval_balanced` gave a standard deviation
+of 0.005 macro-F1 (0.738–0.752), so differences below about 0.015 between the LLM rows
+should not be read as real. The exception is few-shot gpt-oss-20b on `eval_balanced`
+(+0.048 over its zero-shot run), which is well outside that range.
 
 ### Is the difference real?
 
@@ -111,10 +114,10 @@ A paired bootstrap (2,000 resamples) compared each LLM with the 30k-label baseli
   are above zero.
 
 A McNemar test on accuracy gave the same answer in all 11 comparisons. These intervals
-cover sampling of the test set only; LLM run-to-run variation was not measured.
+cover sampling of the test set only; the run-to-run variation measured below
+(σ ≈ 0.005) is not included.
 
 ---
-
 
 ## Learning curve
 
@@ -132,6 +135,9 @@ mean macro-F1 over 3 seeds; the 30k point uses the whole pool.
 | 30,000 | 0.754 | 0.654 |
 | LLMs (0–4 examples) | 0.742 – 0.793 | 0.747 – 0.769 |
 
+The LLM row is the range over the runs reported in the tables above, not over repeat
+runs of the same configuration.
+
 On the balanced set, the baseline reaches the LLM range at 30,000 labels. On the natural
 set it does not, and the gain from 10k to 30k labels is small (+0.025).
 
@@ -140,12 +146,16 @@ set it does not, and the gain from 10k to 30k labels is small (+0.025).
 ## What I observed
 
 1. **With equal classes and 30,000 labels, no significant difference was found** between
-   TF-IDF and the LLMs. With the real-world class mix, the LLMs were significantly better (paired bootstrap).
+   TF-IDF and the LLMs. With the real-world class mix, the LLMs were significantly 
+   better (paired bootstrap).
+
 2. **The largest part of the gap is in the neutral class.** For the 30k-label baseline on
    `eval_natural`, neutral F1 is 0.325 against 0.456–0.500 for the LLMs. Negative is also
-   lower (0.72 vs 0.82–0.86); positive is close (0.91 vs 0.96–0.97). Removing class
-   weighting entirely made the baseline worse on every set, including `eval_natural`
-   (0.654 → 0.576). Partial weighting or an adjusted decision threshold was not tried.
+   lower (0.72 vs 0.82–0.86); positive is close (0.91 vs 0.96–0.97). Two ways of moving
+   the baseline's decision boundary were tried and both made it worse on `eval_natural`:
+   removing class weighting (0.654 → 0.576) and correcting the predicted probabilities by
+   the training class priors (0.654 → 0.546, where neutral recall drops to 0.04). Both
+   were also worse on `dev`, so neither was adopted.
 
 3. **The baseline over-predicts neutral.** On `eval_natural`, the baseline's neutral
    recall is somewhat lower than the LLMs' (0.40 vs 0.44–0.50), but its precision is much
@@ -168,8 +178,10 @@ set it does not, and the gain from 10k to 30k labels is small (+0.025).
    `eval_natural`. Measured in accuracy, the natural-set gain looks much smaller (about
    +0.03), because the majority class already keeps accuracy high.
 
-5. **The baseline is much faster.** Under 1 ms per review against 0.14–1.1 s for the LLMs
-   (baseline: batch prediction time per review; LLMs: one call at a time).
+5. **The baseline is much faster per request.** Under 1 ms per review in batch prediction
+   against 0.14–1.1 s per LLM call. These are different quantities: the LLM figure is
+   single-request latency, and throughput would improve with concurrent requests, which
+   was not tested. Cost per review would not change.
 
 ---
 
@@ -197,22 +209,28 @@ set it does not, and the gain from 10k to 30k labels is small (+0.025).
   down to 0.40 — so a threshold chosen for one model does not carry over to another.
 
 ---
+
 ## Limitations
 
-- Each LLM was run only once. Repeat runs could shift results by a few points.
+- Each LLM configuration in the tables was run once. Repeating zero-shot gpt-oss-20b five
+  times on `eval_balanced` gave a standard deviation of 0.005 macro-F1. Those five runs
+  were back-to-back; two runs two days apart differed by 0.016, so 0.005 is a lower bound
+  on the real run-to-run variation.
 - The dataset is public and old; the LLMs may have seen it during training.
 - Labels come from star ratings, which do not always match the text.
-- The prompt was tuned on 200 `dev` reviews (16 neutral) with gpt-oss-120b only; the
-  other models used it untuned.
 - The four few-shot examples were chosen once; other sets of examples were not tried.
-- The baseline's settings were chosen by reasoning, not by a hyperparameter search.
 - Exact duplicates were removed before splitting; near-duplicates were not checked.
 - Only TF-IDF was tested as the classical model; embeddings or a fine-tuned small model
   were not tried.
-- Latency includes retry waits, which were not logged separately, and was measured one
-  request at a time. The median is less affected than the tail.
+- The two methods did not get equal tuning effort. The prompt was revised three times
+  on 200 `dev` reviews (16 neutral) with gpt-oss-120b only; the other models used it
+  untuned. The baseline's settings were chosen by reasoning, not by a search, and its
+  decision threshold was left at the default. This is likely to favour the LLM.
+- Latency was measured one request at a time and includes retry waits, which were not
+  logged separately. Throughput under concurrency was not measured.
 
 ---
+
 ## Not tested
 
 - **A new class.** "Sarcastic" could be added to the LLM prompt and checked for whether it
@@ -223,8 +241,12 @@ set it does not, and the gain from 10k to 30k labels is small (+0.025).
 - **Development time** for each approach was not recorded.
 - **A real router** that sends each review to the baseline or the LLM based on confidence,
   to see how much of the upper-bound gain is reachable.
-- **Baseline calibration.** Partial class weighting, a prior correction or a decision
-  threshold tuned on `dev`.
+- **Per-class decision thresholds** for the baseline. Removing class weighting and a
+  prior correction were both tried and rejected (see observation 2); tuning one threshold
+  per class needs more than the 16 neutral reviews in `dev`.
+- **The label ceiling.** Both methods plateau around 0.50 neutral F1. Hand-labelling a
+  sample of neutral reviews without seeing the stars would show how much of that is the
+  models and how much is the labels.
 
 ---
 ## Project structure
