@@ -59,9 +59,11 @@ were used. The few-shot prompt adds the four examples to the same prompt, so the
 are the only difference between zero-shot and few-shot. Why these four were chosen is in
 [`fewshot_candidates.md`](results/analysis/fewshot_candidates.md).
 
-**Output checks.** Every LLM answer was checked against a fixed JSON format. 6,796 of
-6,800 answers passed. The 4 failures came from one gpt-oss-120b run, which wrote a
-confidence value as text ("0. nine"); they are counted as wrong answers.
+**Output checks.** Every LLM answer was checked against a fixed JSON format. In the runs
+reported in the tables, 6,796 of 6,800 answers passed; the five repeat runs added 1,500
+more, all of which passed. The 4 failures came from the few-shot gpt-oss-120b run on
+`eval_balanced`, which wrote a confidence value as text ("0. nine"); they are counted as
+wrong answers.
 
 ---
 
@@ -96,14 +98,18 @@ confidence value as text ("0. nine"); they are counted as wrong answers.
 | few-shot gpt-oss-20b | 0.747 | $0.09 | 0.14 s |
 | few-shot gpt-oss-120b | 0.762 | $0.18 | 0.22 s |
 
-Costs are list prices (Sep 2026) from token counts, without tier or batch
-discounts. The 30k-label row has no ± because it uses the whole training pool, so all
-three seeds see the same data. Few-shot Haiku was not run on `eval_natural`: it is the
-most expensive configuration and did not improve on zero-shot in the balanced set. 
-Repeating zero-shot gpt-oss-20b five times on `eval_balanced` gave a standard deviation
-of 0.005 macro-F1 (0.738–0.752), so differences below about 0.015 between the LLM rows
-should not be read as real. The exception is few-shot gpt-oss-20b on `eval_balanced`
-(+0.048 over its zero-shot run), which is well outside that range.
+Costs are list prices (Sep 2026) from token counts, without tier, batch or caching
+discounts. Prompt caching was enabled for the Anthropic calls but never triggered: the
+system prompt is shorter than the minimum length the API caches.
+
+The 30k-label row has no ± because it uses the whole training pool, so all three seeds see
+the same data. Few-shot Haiku was not run on `eval_natural`: it is the most expensive
+configuration and did not improve on zero-shot in the balanced set.
+
+Repeating zero-shot gpt-oss-20b five times on `eval_balanced` gave a standard deviation of
+0.005 macro-F1 (0.738–0.752), so differences below about 0.015 between the LLM rows should
+not be read as real. The exception is few-shot gpt-oss-20b on `eval_balanced` (+0.048 over
+its zero-shot run), which is well outside that range.
 
 ### Is the difference real?
 
@@ -114,7 +120,7 @@ A paired bootstrap (2,000 resamples) compared each LLM with the 30k-label baseli
   are above zero.
 
 A McNemar test on accuracy gave the same answer in all 11 comparisons. These intervals
-cover sampling of the test set only; the run-to-run variation measured below
+cover sampling of the test set only; the run-to-run variation measured above
 (σ ≈ 0.005) is not included.
 
 ---
@@ -151,11 +157,14 @@ set it does not, and the gain from 10k to 30k labels is small (+0.025).
 
 2. **The largest part of the gap is in the neutral class.** For the 30k-label baseline on
    `eval_natural`, neutral F1 is 0.325 against 0.456–0.500 for the LLMs. Negative is also
-   lower (0.72 vs 0.82–0.86); positive is close (0.91 vs 0.96–0.97). Two ways of moving
-   the baseline's decision boundary were tried and both made it worse on `eval_natural`:
-   removing class weighting (0.654 → 0.576) and correcting the predicted probabilities by
-   the training class priors (0.654 → 0.546, where neutral recall drops to 0.04). Both
-   were also worse on `dev`, so neither was adopted.
+   lower (0.72 vs 0.82–0.86); positive is close (0.91 vs 0.96–0.97).
+
+   Adjusting the baseline's decision boundary does not close the gap. Removing class
+   weighting (0.654 → 0.576) and correcting the probabilities by the training class
+   priors (0.654 → 0.546) both made it worse, on `dev` as well as on `eval_natural`. As an
+   upper bound, per-class offsets were then tuned directly on `eval_natural` — a setting
+   that overfits the test set and favours the baseline, since the LLMs get no equivalent.
+   The best result was 0.679, still below every LLM (0.747–0.769).
 
 3. **The baseline over-predicts neutral.** On `eval_natural`, the baseline's neutral
    recall is somewhat lower than the LLMs' (0.40 vs 0.44–0.50), but its precision is much
@@ -224,8 +233,9 @@ set it does not, and the gain from 10k to 30k labels is small (+0.025).
   were not tried.
 - The two methods did not get equal tuning effort. The prompt was revised three times
   on 200 `dev` reviews (16 neutral) with gpt-oss-120b only; the other models used it
-  untuned. The baseline's settings were chosen by reasoning, not by a search, and its
-  decision threshold was left at the default. This is likely to favour the LLM.
+  untuned. The baseline's settings were chosen by reasoning, not by a search. Its
+  decision threshold was only checked afterwards (observation 2), where even a
+  test-set-tuned threshold recovered 0.025 of the gap.
 - Latency was measured one request at a time and includes retry waits, which were not
   logged separately. Throughput under concurrency was not measured.
 
@@ -241,14 +251,12 @@ set it does not, and the gain from 10k to 30k labels is small (+0.025).
 - **Development time** for each approach was not recorded.
 - **A real router** that sends each review to the baseline or the LLM based on confidence,
   to see how much of the upper-bound gain is reachable.
-- **Per-class decision thresholds** for the baseline. Removing class weighting and a
-  prior correction were both tried and rejected (see observation 2); tuning one threshold
-  per class needs more than the 16 neutral reviews in `dev`.
-- **The label ceiling.** Both methods plateau around 0.50 neutral F1. Hand-labelling a
-  sample of neutral reviews without seeing the stars would show how much of that is the
-  models and how much is the labels.
+- **The label ceiling.** On `eval_natural` the LLMs' neutral F1 stays between 0.46 and
+  0.50. Hand-labelling a sample of neutral reviews without seeing the stars would show
+  how much of that is the models and how much is the labels.
 
 ---
+
 ## Project structure
 
 ```
@@ -272,7 +280,6 @@ set it does not, and the gain from 10k to 30k labels is small (+0.025).
 │   └── figures/
 └── requirements.txt
 ```
-
 
 ---
 
